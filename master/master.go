@@ -26,11 +26,11 @@ var (
 
 type node struct {
 	Ws         *websocket.Conn
-	Id         string  `json:"id"`
-	Name       string  `json:"name"`
-	IsWorking  bool    `json:"is_working"`
-	FinishRate float64 `json:"finish_rate"` // 完成了总请求的比例
-	AvgDelay   int     `json:"avg_delay"`   // 访问目标服务的平均延迟(最近10s)
+	Id         string `json:"id"`
+	Name       string `json:"name"`
+	IsWorking  bool   `json:"is_working"`
+	FinishRate int    `json:"finish_rate"` // 完成了总请求的比例
+	AvgDelay   int    `json:"avg_delay"`   // 访问目标服务的平均延迟(最近10个请求)
 }
 
 func InitMaster(r *gin.Engine) {
@@ -60,7 +60,7 @@ func myWS(c *gin.Context) {
 	//开协程持续接收消息
 	go func() {
 		for {
-			tempNode, ok := nodeInfos[id]
+			_, ok := nodeInfos[id]
 			if !ok {
 				memberOut(id)
 				break
@@ -82,7 +82,7 @@ func myWS(c *gin.Context) {
 			}
 
 			// 更新节点信息
-			tempNode = node{
+			tempNode := node{
 				Name:       msg.Name,
 				IsWorking:  msg.IsWorking,
 				FinishRate: msg.FinishRate,
@@ -103,4 +103,15 @@ func memberOut(id string) {
 	delete(nodeInfos, id)
 	totalWorkerNums--
 	nodeLock.Unlock()
+}
+
+// 返回所有节点信息的数组(前端接口调用)
+func HandleGetAllNodeInfos() []node {
+	nodeLock.Lock()
+	defer nodeLock.Unlock()
+	nodeInfosArray := []node{}
+	for _, node := range nodeInfos {
+		nodeInfosArray = append(nodeInfosArray, node)
+	}
+	return nodeInfosArray
 }

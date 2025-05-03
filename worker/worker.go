@@ -40,7 +40,7 @@ type WsMessage struct {
 	UsingThreadsNums int       `json:"using_threads_nums"`
 	TotalRequestNums int       `json:"total_request_nums"`
 	StartWorkAt      string    `json:"start_work_at"`
-	FinishRate       float64   `json:"finish_rate"`
+	FinishRate       int       `json:"finish_rate"`
 	AvgDelay         int       `json:"avg_delay"`
 }
 
