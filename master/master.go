@@ -3,6 +3,7 @@ package master
 import (
 	"demo/worker"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -25,12 +26,14 @@ var (
 )
 
 type node struct {
-	Ws         *websocket.Conn
-	Id         string `json:"id"`
-	Name       string `json:"name"`
-	IsWorking  bool   `json:"is_working"`
-	FinishRate int    `json:"finish_rate"` // 完成了总请求的比例
-	AvgDelay   int    `json:"avg_delay"`   // 访问目标服务的平均延迟(最近10个请求)
+	Ws          *websocket.Conn
+	Id          string  `json:"id"`
+	Name        string  `json:"name"`
+	TotalCPU    float64 `json:"total_cpu"`
+	StartWorkAt string  `json:"start_work_at"`
+	IsWorking   bool    `json:"is_working"`
+	FinishRate  int     `json:"finish_rate"` // 完成了总请求的比例
+	AvgDelay    int     `json:"avg_delay"`   // 访问目标服务的平均延迟(最近10个请求)
 }
 
 func InitMaster(r *gin.Engine) {
@@ -83,10 +86,14 @@ func myWS(c *gin.Context) {
 
 			// 更新节点信息
 			tempNode := node{
-				Name:       msg.Name,
-				IsWorking:  msg.IsWorking,
-				FinishRate: msg.FinishRate,
-				AvgDelay:   msg.AvgDelay,
+				Ws:          ws,
+				Id:          id,
+				Name:        msg.Name,
+				TotalCPU:    msg.TotalCPU,
+				StartWorkAt: msg.StartWorkAt,
+				IsWorking:   msg.IsWorking,
+				FinishRate:  msg.FinishRate,
+				AvgDelay:    msg.AvgDelay,
 			}
 			nodeLock.Lock()
 			nodeInfos[id] = tempNode
@@ -114,4 +121,74 @@ func HandleGetAllNodeInfos() []node {
 		nodeInfosArray = append(nodeInfosArray, node)
 	}
 	return nodeInfosArray
+}
+
+// 启动所有设备执行新任务
+func StartNewTaskAll(reqBashText string, enableRandomParams []string, totalRequestNums, usingThreadNums, timeConstraint int) error {
+	log.Println("启动所有设备执行新任务")
+	// 停止所有设备任务
+	err := SwitchDeviceAll(false, "")
+	if err != nil {
+		return err
+	}
+	// 编辑发送数据
+	msg := worker.WsMessage{
+		RequestBashText:    reqBashText,
+		EnableRandomParams: enableRandomParams,
+		TotalRequestNums:   totalRequestNums,
+		UsingThreadsNums:   usingThreadNums,
+		TotalTime:          timeConstraint,
+		IsWorking:          true,
+	}
+
+	jsonData, err := json.Marshal(msg)
+	if err != nil {
+		log.Println("编码消息失败: ", err)
+		return err
+	}
+
+	nodeLock.Lock()
+	defer nodeLock.Unlock()
+	// 遍历所有节点并发送消息
+	for _, node := range nodeInfos {
+		if err := node.Ws.WriteMessage(websocket.TextMessage, jsonData); err != nil {
+			log.Println("启动新任务发送失败: ", node.Name, err)
+			return err
+		}
+	}
+	return nil
+}
+
+// 切换设备的启停状态
+// id 为空字符串则操作所有设备
+func SwitchDeviceAll(isWorking bool, id string) error {
+	msg := worker.WsMessage{IsWorking: isWorking}
+	jsonData, err := json.Marshal(msg)
+	if err != nil {
+		log.Println("编码消息失败: ", err)
+		return err
+	}
+	fmt.Println("ABC:")
+	nodeLock.Lock()
+	defer nodeLock.Unlock()
+	if id == "" {
+		for _, node := range nodeInfos {
+			if err := node.Ws.WriteMessage(websocket.TextMessage, jsonData); err != nil {
+				log.Println("临时停止设备发送失败: ", node.Name, err)
+				return err
+			}
+		}
+		return nil
+	} else {
+		if node, ok := nodeInfos[id]; ok {
+			if err := node.Ws.WriteMessage(websocket.TextMessage, jsonData); err != nil {
+				log.Println("临时停止设备发送失败: ", node.Name, err)
+				return err
+			}
+			return nil
+		} else {
+			log.Println("临时停止设备失败: ", id, "不存在")
+			return err
+		}
+	}
 }

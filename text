@@ -1,0 +1,12 @@
+curl 'http://z7x72t8hh6.sxhdzl.com/app/guestLogin?code=6ab050&userKey=104780fa4c55ed85190433f521234925&phone=110121912067&password=how-much-network-traffic-do-you-still-have' \
+  -X 'POST' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6' \
+  -H 'Connection: keep-alive' \
+  -H 'Content-Length: 0' \
+  -H 'Origin: http://z7x72t8hh6.sxhdzl.com' \
+  -H 'Referer: http://z7x72t8hh6.sxhdzl.com/client/index.html' \
+  -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0' \
+  -H 's: 5ecb2c7cb43fe85fe0a2727d81760ca6' \
+  -H 't: 1746322784255' \
+  --insecure
