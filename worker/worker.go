@@ -20,6 +20,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/spf13/viper"
 )
 
 // 全局变量
@@ -72,9 +73,17 @@ var dialer = websocket.Dialer{
 func InitWorker() {
 	// TODO: viper read data viper.GetString("example")
 	delayTimeChan = make(chan int, 300)
-	name = "test_123"
-	remote_address := "127.0.0.1"
-	remote_port := "55155"
+
+	viper.SetConfigName("config")
+	viper.SetConfigType("json")
+	viper.AddConfigPath("./")
+	if err := viper.ReadInConfig(); err != nil {
+		log.Fatal(err)
+	}
+
+	name = viper.GetString("name")
+	remote_address := viper.GetString("remote_address")
+	remote_port := viper.GetInt("remote_port")
 	host = fmt.Sprintf("%v:%v", remote_address, remote_port)
 	u = url.URL{
 		Scheme:   "ws",
@@ -316,10 +325,13 @@ func sendLocalStatus() {
 
 				clearChan(delayTimeChan)
 			}
-			log.Printf("平均延迟: %5vms , 完成率: %3v%% ", avgDelay, finishRate)
+			if isWorking {
+				log.Printf("平均延迟: %5vms , 完成率: %3v%% ", avgDelay, finishRate)
+			}
 
 			// 发送到主机
 			msg := WsMessage{
+				Name:        name,
 				TotalCPU:    totalCPU,
 				IsWorking:   isWorking,
 				StartWorkAt: startWork_at,
@@ -336,7 +348,7 @@ func sendLocalStatus() {
 				isConnected = false
 			}
 		}
-		time.Sleep(2 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 }
 
@@ -366,6 +378,16 @@ func WriteFile(content string) error {
 		return fmt.Errorf("写入文件失败: %v", err)
 	}
 	return nil
+}
+
+// 读取请求文件的内容并返回字符串
+func ReadFile() (string, error) {
+	filePath := "text"
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", fmt.Errorf("读取文件失败: %v", err)
+	}
+	return string(content), nil
 }
 
 // 清空chan

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"sync"
 
 	"github.com/gin-gonic/gin"
@@ -120,6 +121,9 @@ func HandleGetAllNodeInfos() []node {
 	for _, node := range nodeInfos {
 		nodeInfosArray = append(nodeInfosArray, node)
 	}
+	sort.Slice(nodeInfosArray, func(i, j int) bool {
+		return nodeInfosArray[i].Id < nodeInfosArray[j].Id
+	})
 	return nodeInfosArray
 }
 

@@ -28,6 +28,7 @@ func InitFrontAPI(r *gin.Engine) {
 	front.GET("/ping", handlePing)
 	front.GET("/clock", getClockTime)
 	front.GET("/queryDevices", queryDevices)
+	front.GET("/getDefaultRequestBashText", getDefaultRequestBashText)
 
 	front.POST("/startTaskAll", startTaskAll)
 	front.POST("/switchDeviceAll", switchDeviceAll)
@@ -98,4 +99,19 @@ func switchDeviceAll(c *gin.Context) {
 			"message": fmt.Sprintf("切换设备失败: %v", err),
 		})
 	}
+}
+
+// 获取后端默认保存的请求数据
+func getDefaultRequestBashText(c *gin.Context) {
+	content, err := worker.ReadFile()
+	if err != nil {
+		c.JSON(400, gin.H{
+			"message": fmt.Sprintf("读取后端默认请求数据失败: %v", err),
+		})
+		return
+	}
+	c.JSON(200, gin.H{
+		"message": "",
+		"data":    content,
+	})
 }
