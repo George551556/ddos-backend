@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,6 +16,7 @@ func main() {
 	if len(args) != 1 {
 		fmt.Println("master mode...")
 		r := gin.Default()
+		r.Use(cors.Default()) // 允许跨域
 		front.InitFrontAPI(r)
 		master.InitMaster(r)
 		r.Run(":55155")
