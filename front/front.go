@@ -32,6 +32,7 @@ func InitFrontAPI(r *gin.Engine) {
 
 	front.POST("/startTaskAll", startTaskAll)
 	front.POST("/switchDeviceAll", switchDeviceAll)
+	front.POST("/singleAttack", handleSingleAttack)
 
 }
 
@@ -77,7 +78,7 @@ func startTaskAll(c *gin.Context) {
 	// 启动所有设备
 	if err := master.StartNewTaskAll(msg.RequestBashText, msg.EnableRandomParams, msg.TotalRequestNums, msg.UsingThreadsNums, msg.TimeConstraint); err != nil {
 		c.JSON(400, gin.H{
-			"message": fmt.Sprintf("启动所有设备任务失败: %v", err),
+			"message": fmt.Sprintf("启动所有设备失败: %v", err),
 		})
 		return
 	}
@@ -113,5 +114,30 @@ func getDefaultRequestBashText(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"message": "",
 		"data":    content,
+	})
+}
+
+// 单次访问目标，以测试接口可用性
+func handleSingleAttack(c *gin.Context) {
+	var msg struct {
+		RequestBashText string `json:"request_bash_text"`
+	}
+	if err := c.ShouldBindJSON(&msg); err != nil {
+		c.JSON(400, gin.H{
+			"message": fmt.Sprintf("解析请求数据失败: %v", err),
+		})
+		return
+	}
+	statusCode, delayTime, respBody, err := master.SingleAttack(msg.RequestBashText)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"message": fmt.Sprintf("单次攻击失败: %v", err),
+		})
+		return
+	}
+	c.JSON(200, gin.H{
+		"status_code": statusCode,
+		"delay_time":  delayTime,
+		"resp_body":   respBody,
 	})
 }

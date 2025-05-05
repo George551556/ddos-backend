@@ -3,11 +3,13 @@ package master
 import (
 	"demo/worker"
 	"encoding/json"
-	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"sort"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -172,7 +174,6 @@ func SwitchDeviceAll(isWorking bool, id string) error {
 		log.Println("编码消息失败: ", err)
 		return err
 	}
-	fmt.Println("ABC:")
 	nodeLock.Lock()
 	defer nodeLock.Unlock()
 	if id == "" {
@@ -195,4 +196,27 @@ func SwitchDeviceAll(isWorking bool, id string) error {
 			return err
 		}
 	}
+}
+
+// 单次访问测试（由后端服务对被攻击目标进行一次访问，并返回状态码、延迟和响应体到前端）
+func SingleAttack(reqBashText string) (int, int, string, error) {
+	file := strings.NewReader(reqBashText) // 跳过写入文件的步骤，避免污染原有数据
+	reqs, err := worker.ParseCurlFileToRequest(file, 1)
+	if err != nil {
+		return 0, 0, "", err
+	}
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	startTime := time.Now()
+	resp, err := client.Do(reqs[0])
+	if err != nil {
+		return 0, 0, "", err
+	}
+	defer resp.Body.Close()
+	timeConsume := int(time.Since(startTime).Milliseconds())
+	bodyContent, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return 0, 0, "", err
+	}
+	return resp.StatusCode, timeConsume, string(bodyContent), nil
 }

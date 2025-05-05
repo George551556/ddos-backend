@@ -71,7 +71,6 @@ var dialer = websocket.Dialer{
 }
 
 func InitWorker() {
-	// TODO: viper read data viper.GetString("example")
 	delayTimeChan = make(chan int, 300)
 
 	viper.SetConfigName("config")
