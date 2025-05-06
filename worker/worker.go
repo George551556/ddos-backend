@@ -46,6 +46,7 @@ var (
 
 	charsets      = "abcdefghijklmnopqrstuvwxyz0123456789"
 	delayTimeChan chan int
+	sharedClient  *http.Client
 )
 
 // socket通信的消息载体
@@ -71,7 +72,9 @@ var dialer = websocket.Dialer{
 }
 
 func InitWorker() {
-	delayTimeChan = make(chan int, 300)
+	// 初始化操作
+	initConnClient()
+	delayTimeChan = make(chan int, 6000)
 
 	viper.SetConfigName("config")
 	viper.SetConfigType("json")
@@ -203,15 +206,15 @@ func worker(myTimeCtx context.Context, reqs *http.Request, wg *sync.WaitGroup, f
 		}
 		reqNumsLock.Unlock()
 
-		client := &http.Client{}
 		startTime := time.Now()
-		resp, err := client.Do(reqs)
+		resp, err := sharedClient.Do(reqs)
 		if err != nil {
 			fmt.Println("error: ", err)
 			time.Sleep(2 * time.Second)
 			continue
 		}
-		defer resp.Body.Close()
+		io.Copy(io.Discard, resp.Body) // 读取Body 避免连接被标记为不可用
+		resp.Body.Close()
 
 		timeConsume := int(time.Since(startTime).Milliseconds())
 		fmt.Printf("time consume: %4v ms | status: %3v \n", timeConsume, resp.StatusCode)
@@ -307,6 +310,18 @@ func ParseCurlFileToRequest(file io.Reader, num int) ([]*http.Request, error) {
 	return requests, nil
 }
 
+// 初始化连接池
+func initConnClient() {
+	sharedClient = &http.Client{
+		Transport: &http.Transport{
+			MaxIdleConns:        500,
+			MaxIdleConnsPerHost: 500,
+			IdleConnTimeout:     60 * time.Second,
+		},
+		Timeout: 10 * time.Second,
+	}
+}
+
 // 协程：定时更新数据并发送到主机
 func sendLocalStatus() {
 	for {
@@ -325,7 +340,7 @@ func sendLocalStatus() {
 				clearChan(delayTimeChan)
 			}
 			if isWorking {
-				log.Printf("平均延迟: %5vms , 完成率: %3v%% ", avgDelay, finishRate)
+				log.Printf("平均延迟: %4v ms , 完成率: %3v%% ", avgDelay, finishRate)
 			}
 
 			// 发送到主机
@@ -347,7 +362,7 @@ func sendLocalStatus() {
 				isConnected = false
 			}
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
 }
 
