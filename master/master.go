@@ -206,7 +206,7 @@ func SingleAttack(reqBashText string) (int, int, string, error) {
 		return 0, 0, "", err
 	}
 
-	client := &http.Client{Timeout: 5 * time.Second}
+	client := &http.Client{Timeout: 30 * time.Second}
 	startTime := time.Now()
 	resp, err := client.Do(reqs[0])
 	if err != nil {
