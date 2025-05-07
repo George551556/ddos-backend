@@ -165,7 +165,9 @@ func startTasks() {
 	defer file.Close()
 	reqs, err := ParseCurlFileToRequest(file, workerNum)
 	if err != nil {
-		panic(err)
+		log.Printf("读取文件失败: %s\n 停止工作...", err.Error())
+		isWorking = false
+		return
 	}
 	// 启动工人
 	wg := sync.WaitGroup{}
