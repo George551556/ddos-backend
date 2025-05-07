@@ -314,8 +314,8 @@ func ParseCurlFileToRequest(file io.Reader, num int) ([]*http.Request, error) {
 func initConnClient() {
 	sharedClient = &http.Client{
 		Transport: &http.Transport{
-			MaxIdleConns:        500,
-			MaxIdleConnsPerHost: 500,
+			MaxIdleConns:        1000,
+			MaxIdleConnsPerHost: 1000,
 			IdleConnTimeout:     60 * time.Second,
 		},
 		Timeout: 10 * time.Second,
@@ -362,7 +362,7 @@ func sendLocalStatus() {
 				isConnected = false
 			}
 		}
-		time.Sleep(2 * time.Second)
+		time.Sleep(1500 * time.Millisecond)
 	}
 }
 
