@@ -74,7 +74,6 @@ var dialer = websocket.Dialer{
 func InitWorker() {
 	// 初始化操作
 	initConnClient()
-	delayTimeChan = make(chan int, 6000)
 
 	viper.SetConfigName("config")
 	viper.SetConfigType("json")
@@ -312,15 +311,17 @@ func ParseCurlFileToRequest(file io.Reader, num int) ([]*http.Request, error) {
 	return requests, nil
 }
 
-// 初始化连接池
+// 初始化连接池和其他初始化操作
 func initConnClient() {
+	delayTimeChan = make(chan int, 40000)
+
 	sharedClient = &http.Client{
 		Transport: &http.Transport{
-			MaxIdleConns:        1000,
-			MaxIdleConnsPerHost: 1000,
+			MaxIdleConns:        8000,
+			MaxIdleConnsPerHost: 8000,
 			IdleConnTimeout:     60 * time.Second,
 		},
-		Timeout: 10 * time.Second,
+		Timeout: 15 * time.Second,
 	}
 }
 
