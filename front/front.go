@@ -2,6 +2,7 @@ package front
 
 import (
 	"demo/master"
+	"demo/utils"
 	"demo/worker"
 	"fmt"
 	"time"
@@ -104,7 +105,7 @@ func switchDeviceAll(c *gin.Context) {
 
 // 获取后端默认保存的请求数据
 func getDefaultRequestBashText(c *gin.Context) {
-	content, err := worker.ReadFile()
+	content, err := utils.ReadFile()
 	if err != nil {
 		c.JSON(400, gin.H{
 			"message": fmt.Sprintf("读取后端默认请求数据失败: %v", err),

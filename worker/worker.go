@@ -4,13 +4,11 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"crypto/md5"
-	"encoding/hex"
+	"demo/utils"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -19,14 +17,13 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/spf13/viper"
 )
 
 // 全局变量
 var (
 	name         string
-	totalCPU     float64
+	totalCPU     int
 	allCPU       []float64
 	isConnected  bool = false
 	conn         *websocket.Conn
@@ -44,7 +41,6 @@ var (
 	finishedReqNumsLock sync.Mutex
 	avgDelay            int
 
-	charsets      = "abcdefghijklmnopqrstuvwxyz0123456789"
 	delayTimeChan chan int
 	sharedClient  *http.Client
 )
@@ -53,7 +49,7 @@ var (
 type WsMessage struct {
 	Name               string    `json:"name"`
 	Cores              int       `json:"cores"`
-	TotalCPU           float64   `json:"total_cpu"`
+	TotalCPU           int       `json:"total_cpu"`
 	AllCPU             []float64 `json:"all_cpu"`
 	IsWorking          bool      `json:"is_working"`
 	RequestBashText    string    `json:"request_bash_text"`
@@ -329,7 +325,7 @@ func initConnClient() {
 func sendLocalStatus() {
 	for {
 		if isConnected {
-			totalCPU, allCPU = Get_CPU()
+			totalCPU, allCPU = utils.Get_CPU()
 			finishedReqNumsLock.Lock()
 			finishRate := int(float64(finishedReqNums) / float64(reqNums+finishedReqNums) * 100)
 			finishedReqNumsLock.Unlock()
@@ -397,16 +393,6 @@ func WriteFile(content string) error {
 	return nil
 }
 
-// 读取请求文件的内容并返回字符串
-func ReadFile() (string, error) {
-	filePath := "text"
-	content, err := os.ReadFile(filePath)
-	if err != nil {
-		return "", fmt.Errorf("读取文件失败: %v", err)
-	}
-	return string(content), nil
-}
-
 // 清空chan
 func clearChan(ch chan int) {
 	for {
@@ -418,33 +404,4 @@ func clearChan(ch chan int) {
 			return
 		}
 	}
-}
-
-// 将传入的字符串生成为一个md5码
-func Str2md5(str string) string {
-	str_1 := []byte(str)
-	md5New := md5.New()
-	md5New.Write(str_1)
-	md5string := hex.EncodeToString(md5New.Sum(nil))
-	return md5string
-}
-
-// 以随机数字生成一个md5值
-func GetRandom_md5() string {
-	temp := make([]byte, 15)
-	for i := range temp {
-		temp[i] = charsets[rand.Int()%len(charsets)]
-	}
-	temp_str := string(temp)
-	return Str2md5(temp_str)
-}
-
-func Get_CPU() (float64, []float64) {
-	totalCPU, _ := cpu.Percent(time.Second, false)
-	allCPU, _ := cpu.Percent(time.Second, true)
-	// totalCPU = fmt.Sprintf("%.4f", totalCPU)
-	// for i := range allCPU {
-	// 	allCPU[i] = fmt.Sprintf("%.4f", allCPU[i])
-	// }
-	return totalCPU[0], allCPU
 }

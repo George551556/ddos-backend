@@ -1,6 +1,7 @@
 package master
 
 import (
+	"demo/utils"
 	"demo/worker"
 	"encoding/json"
 	"io"
@@ -30,13 +31,13 @@ var (
 
 type node struct {
 	Ws          *websocket.Conn
-	Id          string  `json:"id"`
-	Name        string  `json:"name"`
-	TotalCPU    float64 `json:"total_cpu"`
-	StartWorkAt string  `json:"start_work_at"`
-	IsWorking   bool    `json:"is_working"`
-	FinishRate  int     `json:"finish_rate"` // 完成了总请求的比例
-	AvgDelay    int     `json:"avg_delay"`   // 访问目标服务的平均延迟(最近10个请求)
+	Id          string `json:"id"`
+	Name        string `json:"name"`
+	TotalCPU    int    `json:"total_cpu"`
+	StartWorkAt string `json:"start_work_at"`
+	IsWorking   bool   `json:"is_working"`
+	FinishRate  int    `json:"finish_rate"` // 完成了总请求的比例
+	AvgDelay    int    `json:"avg_delay"`   // 访问目标服务的平均延迟(最近10个请求)
 }
 
 func InitMaster(r *gin.Engine) {
@@ -52,7 +53,7 @@ func myWS(c *gin.Context) {
 	}
 	//保存连接对象
 	name := c.Query("name") // !!!!!!
-	id := worker.GetRandom_md5()
+	id := utils.GetRandom_md5()
 	nodeLock.Lock()
 	nodeInfos[id] = node{
 		Ws:   ws,
