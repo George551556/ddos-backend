@@ -313,11 +313,11 @@ func initConnClient() {
 
 	sharedClient = &http.Client{
 		Transport: &http.Transport{
-			MaxIdleConns:        8000,
-			MaxIdleConnsPerHost: 8000,
-			IdleConnTimeout:     60 * time.Second,
+			MaxIdleConns:        10000,
+			MaxIdleConnsPerHost: 10000,
+			IdleConnTimeout:     60 * time.Second, // 空闲连接的维持时间
 		},
-		Timeout: 15 * time.Second,
+		Timeout: 2 * time.Second, // 设置单次请求的超时时间
 	}
 }
 
