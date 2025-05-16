@@ -37,11 +37,14 @@ var (
 	totalTime   time.Duration      // 总时长
 	workerNum   int           = 0  // 并发的请求数
 
+	timeoutReqNums      int // 超时未完成的请求数量
+	timeoutReqNumsLock  sync.Mutex
 	finishedReqNums     int // 已经完成的请求数量
 	finishedReqNumsLock sync.Mutex
 	avgDelay            int
 
-	delayTimeChan chan int
+	delayTimeChan chan int     // 请求的耗时(ms)
+	delayChanSize int      = 8 // 延迟时间通道大小
 	sharedClient  *http.Client
 )
 
@@ -59,6 +62,7 @@ type WsMessage struct {
 	TotalTime          int       `json:"total_time"` // 运行的最长时间限制
 
 	StartWorkAt string `json:"start_work_at"`
+	TimeoutRate int    `json:"timeout_rate"`
 	FinishRate  int    `json:"finish_rate"`
 	AvgDelay    int    `json:"avg_delay"`
 }
@@ -138,6 +142,7 @@ func InitWorker() {
 				// 更新本地全局变量
 				reqNums = msg.TotalRequestNums
 				finishedReqNums = 0
+				timeoutReqNums = 0
 				totalTime = time.Duration(msg.TotalTime) * time.Minute
 				workerNum = msg.UsingThreadsNums
 				log.Printf("工作启动信息：总请求：%v, 线程数：%v, 运行时间：%v", reqNums, workerNum, totalTime)
@@ -206,19 +211,25 @@ func worker(myTimeCtx context.Context, reqs *http.Request, wg *sync.WaitGroup, f
 		startTime := time.Now()
 		resp, err := sharedClient.Do(reqs)
 		if err != nil {
-			fmt.Println("error: ", err)
-			time.Sleep(2 * time.Second)
+			// 请求失败：可能包括超时
+			timeoutReqNumsLock.Lock()
+			timeoutReqNums++
+			timeoutReqNumsLock.Unlock()
 			continue
 		}
 		io.Copy(io.Discard, resp.Body) // 读取Body 避免连接被标记为不可用
 		resp.Body.Close()
 
 		timeConsume := int(time.Since(startTime).Milliseconds())
-		fmt.Printf("time consume: %4v ms | status: %3v \n", timeConsume, resp.StatusCode)
+
 		finishedReqNumsLock.Lock()
 		finishedReqNums++
 		finishedReqNumsLock.Unlock()
-		delayTimeChan <- timeConsume
+		// 非阻塞式数据写入通道
+		select {
+		case delayTimeChan <- timeConsume:
+		default:
+		}
 	}
 }
 
@@ -309,7 +320,7 @@ func ParseCurlFileToRequest(file io.Reader, num int) ([]*http.Request, error) {
 
 // 初始化连接池和其他初始化操作
 func initConnClient() {
-	delayTimeChan = make(chan int, 40000)
+	delayTimeChan = make(chan int, delayChanSize)
 
 	sharedClient = &http.Client{
 		Transport: &http.Transport{
@@ -317,29 +328,32 @@ func initConnClient() {
 			MaxIdleConnsPerHost: 10000,
 			IdleConnTimeout:     60 * time.Second, // 空闲连接的维持时间
 		},
-		Timeout: 2 * time.Second, // 设置单次请求的超时时间
+		Timeout: 5 * time.Second, // 设置单次请求的超时时间
 	}
 }
 
-// 协程：定时更新数据并发送到主机
+// 协程：定时更新数据并发送到主机, 并日志打印状态
 func sendLocalStatus() {
 	for {
 		if isConnected {
 			totalCPU, allCPU = utils.Get_CPU()
 			finishedReqNumsLock.Lock()
-			finishRate := int(float64(finishedReqNums) / float64(reqNums+finishedReqNums) * 100)
+			timeoutRate := int(float64(timeoutReqNums) / float64(reqNums+finishedReqNums+timeoutReqNums) * 100)
+			finishRate := int(float64(finishedReqNums) / float64(reqNums+finishedReqNums+timeoutReqNums) * 100)
 			finishedReqNumsLock.Unlock()
-			if isWorking && len(delayTimeChan) >= workerNum {
+			if isWorking && len(delayTimeChan) >= delayChanSize/2 {
+				length := len(delayTimeChan)
 				avgDelay = 0
-				for i := 0; i < workerNum; i++ {
+				for range length {
 					avgDelay += <-delayTimeChan
 				}
-				avgDelay = int(avgDelay / workerNum)
+				avgDelay = int(avgDelay / length)
 
 				clearChan(delayTimeChan)
 			}
+
 			if isWorking {
-				log.Printf("平均延迟: %4v ms , 完成率: %3v%% ", avgDelay, finishRate)
+				log.Printf("平均延迟:%4v ms  超时率:%3v%%  完成率:%3v%% ", avgDelay, timeoutRate, finishRate)
 			}
 
 			// 发送到主机
@@ -348,6 +362,7 @@ func sendLocalStatus() {
 				TotalCPU:    totalCPU,
 				IsWorking:   isWorking,
 				StartWorkAt: startWork_at,
+				TimeoutRate: timeoutRate,
 				FinishRate:  finishRate,
 				AvgDelay:    avgDelay,
 			}
@@ -372,7 +387,7 @@ func connect_host() {
 		if !isConnected {
 			conn, _, err = dialer.Dial(u.String(), nil)
 			if err != nil {
-				log.Println("ws连接失败：", err)
+				log.Println("ws连接失败: ", err)
 				time.Sleep(4 * time.Second)
 			} else {
 				log.Println("ws连接成功")

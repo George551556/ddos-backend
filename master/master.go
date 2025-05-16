@@ -36,8 +36,9 @@ type node struct {
 	TotalCPU    int    `json:"total_cpu"`
 	StartWorkAt string `json:"start_work_at"`
 	IsWorking   bool   `json:"is_working"`
-	FinishRate  int    `json:"finish_rate"` // 完成了总请求的比例
-	AvgDelay    int    `json:"avg_delay"`   // 访问目标服务的平均延迟(最近10个请求)
+	TimeoutRate int    `json:"timeout_rate"` // 超时的请求比例
+	FinishRate  int    `json:"finish_rate"`  // 完成了总请求的比例
+	AvgDelay    int    `json:"avg_delay"`    // 访问目标服务的平均延迟(最近10个请求)
 }
 
 func InitMaster(r *gin.Engine) {
@@ -96,6 +97,7 @@ func myWS(c *gin.Context) {
 				TotalCPU:    msg.TotalCPU,
 				StartWorkAt: msg.StartWorkAt,
 				IsWorking:   msg.IsWorking,
+				TimeoutRate: msg.TimeoutRate,
 				FinishRate:  msg.FinishRate,
 				AvgDelay:    msg.AvgDelay,
 			}
