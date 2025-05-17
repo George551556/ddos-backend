@@ -5,7 +5,10 @@ import (
 	"demo/utils"
 	"demo/worker"
 	"fmt"
+	"strconv"
 	"time"
+
+	"log"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,11 +16,12 @@ import (
 // 前后端通信的消息载体
 type FrontMessage struct {
 	// 表单信息
-	RequestBashText    string   `json:"request_bash_text"`
-	EnableRandomParams []string `json:"enable_random_params"` // 需要在url中随机化的param名称列表
-	TotalRequestNums   int      `json:"total_request_nums"`
-	UsingThreadsNums   int      `json:"using_threads_nums"`
-	TimeConstraint     int      `json:"time_constraint"`
+	RequestBashAbstract string   `json:"request_bash_abstract"`
+	RequestBashText     string   `json:"request_bash_text"`
+	EnableRandomParams  []string `json:"enable_random_params"` // 需要在url中随机化的param名称列表
+	TotalRequestNums    int      `json:"total_request_nums"`
+	UsingThreadsNums    int      `json:"using_threads_nums"`
+	TimeConstraint      int      `json:"time_constraint"`
 
 	// 控制信息
 	IsWorking bool   `json:"is_working"`
@@ -30,6 +34,7 @@ func InitFrontAPI(r *gin.Engine) {
 	front.GET("/clock", getClockTime)
 	front.GET("/queryDevices", queryDevices)
 	front.GET("/getDefaultRequestBashText", getDefaultRequestBashText)
+	front.GET("/getPaginatedRecords", getPaginatedRecords)
 
 	front.POST("/startTaskAll", startTaskAll)
 	front.POST("/switchDeviceAll", switchDeviceAll)
@@ -66,6 +71,14 @@ func startTaskAll(c *gin.Context) {
 			"message": fmt.Sprintf("绑定数据失败: %v", err),
 		})
 		return
+	}
+
+	// 保存请求体数据到数据库
+	if msg.RequestBashAbstract == "" {
+		msg.RequestBashAbstract = fmt.Sprintf("Abstract:%v", time.Now().Format("2006-01-02 15:04:05"))
+	}
+	if err := utils.Db_CreateRecord(msg.RequestBashAbstract, msg.RequestBashText); err != nil {
+		log.Println("保存到数据库失败: ", err)
 	}
 
 	// 保存请求数据到本地
@@ -140,5 +153,38 @@ func handleSingleAttack(c *gin.Context) {
 		"status_code": statusCode,
 		"delay_time":  delayTime,
 		"resp_body":   respBody,
+	})
+}
+
+// 分页查询数据库中请求数据默认页面大小为4
+func getPaginatedRecords(c *gin.Context) {
+	pageStr := c.Query("page")
+	sizeStr := c.Query("size")
+	page, err := strconv.Atoi(pageStr)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"message": "页码转换失败",
+		})
+		return
+	}
+	size, err := strconv.Atoi(sizeStr)
+	if err != nil {
+		c.JSON(400, gin.H{
+			"message": "页大小转换失败",
+		})
+		return
+	}
+
+	data, err := utils.Db_QueryPaginateRecords(page, size)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"message": "查询数据失败",
+		})
+		return
+	}
+	c.JSON(200, gin.H{
+		"message":   "查询成功",
+		"data":      data,
+		"totalNums": len(data),
 	})
 }

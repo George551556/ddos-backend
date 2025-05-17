@@ -353,7 +353,7 @@ func sendLocalStatus() {
 			}
 
 			if isWorking {
-				log.Printf("平均延迟:%4v ms  超时率:%3v%%  完成率:%3v%% ", avgDelay, timeoutRate, finishRate)
+				log.Printf("平均延迟:%4vms  超时率:%3v%%  完成率:%3v%% ", avgDelay, timeoutRate, finishRate)
 			}
 
 			// 发送到主机
@@ -376,7 +376,7 @@ func sendLocalStatus() {
 				isConnected = false
 			}
 		}
-		time.Sleep(1500 * time.Millisecond)
+		time.Sleep(2000 * time.Millisecond)
 	}
 }
 
