@@ -65,7 +65,7 @@ func InitDB() error {
 // 添加一条数据
 func Db_CreateRecord(abstract string, bashText string) error {
 	// 比较与最新部分数据是否相同
-	newestData, err := queryNewestData()
+	newestData, err := QueryNewestData()
 	if err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func Db_QueryPaginateRecords(page int, pageSize int) ([]DdosRecord, error) {
 }
 
 // 查询最新的10条数据：用于在新增数据时比对abstract是否有相同，相同则不添加
-func queryNewestData() ([]DdosRecord, error) {
+func QueryNewestData() ([]DdosRecord, error) {
 	var msg []DdosRecord
 	if err := db.Order("id desc").Limit(10).Find(&msg).Error; err != nil {
 		return []DdosRecord{}, fmt.Errorf("查询数据失败: %v", err)

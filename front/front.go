@@ -34,6 +34,7 @@ func InitFrontAPI(r *gin.Engine) {
 	front.GET("/clock", getClockTime)
 	front.GET("/queryDevices", queryDevices)
 	front.GET("/getDefaultRequestBashText", getDefaultRequestBashText)
+	front.GET("/getNewestRequestInfo", getNewestRequestInfo)
 	front.GET("/getPaginatedRecords", getPaginatedRecords)
 
 	front.POST("/startTaskAll", startTaskAll)
@@ -117,6 +118,7 @@ func switchDeviceAll(c *gin.Context) {
 }
 
 // 获取后端默认保存的请求数据
+// *废弃*用查询数据库的函数代替
 func getDefaultRequestBashText(c *gin.Context) {
 	content, err := utils.ReadFile()
 	if err != nil {
@@ -128,6 +130,28 @@ func getDefaultRequestBashText(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"message": "",
 		"data":    content,
+	})
+}
+
+// 获取后端最新的一个请求数据
+func getNewestRequestInfo(c *gin.Context) {
+	msg, err := utils.QueryNewestData()
+	if err != nil {
+		c.JSON(400, gin.H{
+			"message": fmt.Sprintf("获取后端最新的请求数据失败: %v", err),
+		})
+		return
+	}
+
+	if len(msg) < 1 {
+		c.JSON(400, gin.H{
+			"message": "没有数据",
+		})
+	}
+
+	c.JSON(200, gin.H{
+		"message": "",
+		"data":    msg[0],
 	})
 }
 
