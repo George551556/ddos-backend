@@ -133,7 +133,7 @@ func HandleGetAllNodeInfos() []node {
 }
 
 // 启动所有设备执行新任务
-func StartNewTaskAll(reqBashText string, enableRandomParams []string, totalRequestNums, usingThreadNums, timeConstraint int) error {
+func StartNewTaskAll(reqBashText string, randomList []string, totalRequestNums, usingThreadNums, timeConstraint int) error {
 	log.Println("启动所有设备执行新任务")
 	// 停止所有设备任务
 	err := SwitchDeviceAll(false, "")
@@ -142,12 +142,12 @@ func StartNewTaskAll(reqBashText string, enableRandomParams []string, totalReque
 	}
 	// 编辑发送数据
 	msg := worker.WsMessage{
-		RequestBashText:    reqBashText,
-		EnableRandomParams: enableRandomParams,
-		TotalRequestNums:   totalRequestNums,
-		UsingThreadsNums:   usingThreadNums,
-		TotalTime:          timeConstraint,
-		IsWorking:          true,
+		RequestBashText:  reqBashText,
+		RandomList:       randomList,
+		TotalRequestNums: totalRequestNums,
+		UsingThreadsNums: usingThreadNums,
+		TotalTime:        timeConstraint,
+		IsWorking:        true,
 	}
 
 	jsonData, err := json.Marshal(msg)

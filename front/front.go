@@ -18,7 +18,7 @@ type FrontMessage struct {
 	// 表单信息
 	RequestBashAbstract string   `json:"request_bash_abstract"`
 	RequestBashText     string   `json:"request_bash_text"`
-	EnableRandomParams  []string `json:"enable_random_params"` // 需要在url中随机化的param名称列表
+	RandomList          []string `json:"random_list"` // 需要在url中随机化的param名称列表
 	TotalRequestNums    int      `json:"total_request_nums"`
 	UsingThreadsNums    int      `json:"using_threads_nums"`
 	TimeConstraint      int      `json:"time_constraint"`
@@ -91,7 +91,7 @@ func startTaskAll(c *gin.Context) {
 	}
 
 	// 启动所有设备
-	if err := master.StartNewTaskAll(msg.RequestBashText, msg.EnableRandomParams, msg.TotalRequestNums, msg.UsingThreadsNums, msg.TimeConstraint); err != nil {
+	if err := master.StartNewTaskAll(msg.RequestBashText, msg.RandomList, msg.TotalRequestNums, msg.UsingThreadsNums, msg.TimeConstraint); err != nil {
 		c.JSON(400, gin.H{
 			"message": fmt.Sprintf("启动所有设备失败: %v", err),
 		})
