@@ -21,6 +21,7 @@ type FrontMessage struct {
 	RandomList          []string `json:"random_list"` // 需要在url中随机化的param名称列表
 	TotalRequestNums    int      `json:"total_request_nums"`
 	UsingThreadsNums    int      `json:"using_threads_nums"`
+	RequestTimeout      string   `json:"request_timeout"` // 单次请求超时时间
 	TimeConstraint      int      `json:"time_constraint"`
 
 	// 控制信息
@@ -91,7 +92,7 @@ func startTaskAll(c *gin.Context) {
 	}
 
 	// 启动所有设备
-	if err := master.StartNewTaskAll(msg.RequestBashText, msg.RandomList, msg.TotalRequestNums, msg.UsingThreadsNums, msg.TimeConstraint); err != nil {
+	if err := master.StartNewTaskAll(msg.RequestBashText, msg.RandomList, msg.TotalRequestNums, msg.UsingThreadsNums, msg.RequestTimeout, msg.TimeConstraint); err != nil {
 		c.JSON(400, gin.H{
 			"message": fmt.Sprintf("启动所有设备失败: %v", err),
 		})

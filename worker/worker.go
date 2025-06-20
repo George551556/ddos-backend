@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -63,7 +64,8 @@ type WsMessage struct {
 	RandomList       []string  `json:"random_list"`
 	UsingThreadsNums int       `json:"using_threads_nums"`
 	TotalRequestNums int       `json:"total_request_nums"`
-	TotalTime        int       `json:"total_time"` // 运行的最长时间限制
+	TotalTime        int       `json:"total_time"`       // 运行的最长时间限制
+	RequestTimeout   string    `json:"request_time_out"` // 单位: s 单次请求超时时间
 
 	StartWorkAt string `json:"start_work_at"`
 	TimeoutRate int    `json:"timeout_rate"`
@@ -150,9 +152,18 @@ func InitWorker() {
 				finishedReqNums = 0
 				timeoutReqNums = 0
 				totalTime = time.Duration(msg.TotalTime) * time.Minute
+
+				reqTimeoutNum, err := strconv.ParseFloat(msg.RequestTimeout, 32)
+				if err != nil {
+					log.Println("请求超时参数转换失败: ", err)
+					reqTimeoutNum = 1
+					continue
+				}
+				sharedClient.Timeout = time.Duration(reqTimeoutNum*1000) * time.Millisecond
+
 				workerNum = msg.UsingThreadsNums
 				workerRandomList = msg.RandomList
-				log.Printf("工作启动信息：总请求：%v, 线程数：%v, 运行时间：%v \n 随机参数：%v", reqNums, workerNum, totalTime, workerRandomList)
+				log.Printf("工作启动信息：总请求：%v, 线程数：%v, 超时：%v 运行时间：%v \n 随机参数：%v", reqNums, workerNum, totalTime, msg.RequestTimeout, workerRandomList)
 				go startTasks()
 			}
 
@@ -369,7 +380,7 @@ func initConnClient() {
 			MaxIdleConns:        connNums,
 			MaxIdleConnsPerHost: connNums,
 			IdleConnTimeout:     15 * time.Second, // 空闲连接的维持时间
-			DisableKeepAlives:   false,            // 禁止连接复用
+			DisableKeepAlives:   true,             // 禁止连接复用
 		},
 		Timeout: 6 * time.Second, // 设置单次请求的超时时间
 	}
