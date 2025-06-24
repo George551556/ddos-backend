@@ -231,8 +231,23 @@ func worker(myTimeCtx context.Context, reqs *http.Request, wg *sync.WaitGroup, f
 		}
 		reqNumsLock.Unlock()
 
+		// 在每次发送请求前，复制原始请求并重新设置请求体
+		req := reqs.Clone(myTimeCtx) // 使用 Clone 方法复制请求，并传入上下文
+		if reqs.Body != nil {        // 检查原始请求是否有请求体
+			/*
+				post请求的body经处理后是一个流式对象，被读取一次就会失效，因此需要每次复制原始请求体，
+				并复制及设置请求体body
+			*/
+			newBody, err := reqs.GetBody()
+			if err != nil {
+				log.Printf("Failed to get new body for request: %v", err)
+				continue
+			}
+			req.Body = newBody
+		}
+
 		startTime := time.Now()
-		resp, err := sharedClient.Do(reqs)
+		resp, err := sharedClient.Do(req)
 		if err != nil {
 			// 请求失败：可能包括超时
 			timeoutReqNumsLock.Lock()
