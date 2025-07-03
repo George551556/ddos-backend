@@ -35,11 +35,12 @@ var (
 	isWorking    bool = false
 	startWork_at string
 
-	reqNums          int           = -1 // 总请求数量
-	reqNumsLock      sync.Mutex         // 修改请求数量的锁
-	totalTime        time.Duration      // 总时长
-	workerNum        int           = 0  // 并发的请求数
-	workerRandomList []string           // 工人获得的随机参数列表, 其中可能存在 value 或者 key=value 形式的字符串
+	reqNums           int           = -1    // 总请求数量
+	reqNumsLock       sync.Mutex            // 修改请求数量的锁
+	totalTime         time.Duration         // 总时长
+	workerNum         int           = 0     // 并发的请求数
+	workerRandomList  []string              // 工人获得的随机参数列表, 其中可能存在 value 或者 key=value 形式的字符串
+	requestStatusCode string        = "未工作" // 对目标请求的状态码
 
 	timeoutReqNums      int // 超时未完成的请求数量
 	timeoutReqNumsLock  sync.Mutex
@@ -67,10 +68,11 @@ type WsMessage struct {
 	TotalTime        int       `json:"total_time"`       // 运行的最长时间限制
 	RequestTimeout   string    `json:"request_time_out"` // 单位: s 单次请求超时时间
 
-	StartWorkAt string `json:"start_work_at"`
-	TimeoutRate int    `json:"timeout_rate"`
-	FinishRate  int    `json:"finish_rate"`
-	AvgDelay    int    `json:"avg_delay"`
+	StartWorkAt       string `json:"start_work_at"`
+	TimeoutRate       int    `json:"timeout_rate"`
+	FinishRate        int    `json:"finish_rate"`
+	AvgDelay          int    `json:"avg_delay"`
+	RequestStatusCode string `json:"request_status_code"` // 对目标请求的状态码
 }
 
 var dialer = websocket.Dialer{
@@ -198,8 +200,11 @@ func startTasks() {
 		time.Sleep(5 * time.Millisecond)
 	}
 	wg.Wait()
+
+	// 将工作中设置的变量或参数恢复到初始状态
 	log.Println("任务状态：", finishStatus)
 	isWorking = false
+	requestStatusCode = "未工作"
 }
 
 // 单个工人协程
@@ -255,6 +260,7 @@ func worker(myTimeCtx context.Context, reqs *http.Request, wg *sync.WaitGroup, f
 			timeoutReqNumsLock.Unlock()
 
 			if outputLog {
+				requestStatusCode = "请求失败"
 				log.Println("请求结果展示：请求失败：", err)
 			}
 			continue
@@ -269,6 +275,7 @@ func worker(myTimeCtx context.Context, reqs *http.Request, wg *sync.WaitGroup, f
 		finishedReqNumsLock.Unlock()
 
 		if outputLog {
+			requestStatusCode = resp.Status
 			log.Println("请求结果展示：请求成功...")
 		}
 
@@ -427,13 +434,14 @@ func sendLocalStatus() {
 
 			// 发送到主机
 			msg := WsMessage{
-				Name:        name,
-				TotalCPU:    totalCPU,
-				IsWorking:   isWorking,
-				StartWorkAt: startWork_at,
-				TimeoutRate: timeoutRate,
-				FinishRate:  finishRate,
-				AvgDelay:    avgDelay,
+				Name:              name,
+				TotalCPU:          totalCPU,
+				IsWorking:         isWorking,
+				StartWorkAt:       startWork_at,
+				TimeoutRate:       timeoutRate,
+				FinishRate:        finishRate,
+				AvgDelay:          avgDelay,
+				RequestStatusCode: requestStatusCode,
 			}
 			jsonData, err := json.Marshal(msg)
 			if err != nil {

@@ -30,15 +30,16 @@ var (
 )
 
 type node struct {
-	Ws          *websocket.Conn
-	Id          string `json:"id"`
-	Name        string `json:"name"`
-	TotalCPU    int    `json:"total_cpu"`
-	StartWorkAt string `json:"start_work_at"`
-	IsWorking   bool   `json:"is_working"`
-	TimeoutRate int    `json:"timeout_rate"` // 超时的请求比例
-	FinishRate  int    `json:"finish_rate"`  // 完成了总请求的比例
-	AvgDelay    int    `json:"avg_delay"`    // 访问目标服务的平均延迟(最近10个请求)
+	Ws                *websocket.Conn
+	Id                string `json:"id"`
+	Name              string `json:"name"`
+	TotalCPU          int    `json:"total_cpu"`
+	StartWorkAt       string `json:"start_work_at"`
+	IsWorking         bool   `json:"is_working"`
+	TimeoutRate       int    `json:"timeout_rate"`        // 超时的请求比例
+	FinishRate        int    `json:"finish_rate"`         // 完成了总请求的比例
+	AvgDelay          int    `json:"avg_delay"`           // 访问目标服务的平均延迟(最近10个请求)
+	RequestStatusCode string `json:"request_status_code"` // 访问目标服务的状态码
 }
 
 func InitMaster(r *gin.Engine) {
@@ -91,15 +92,16 @@ func myWS(c *gin.Context) {
 
 			// 更新节点信息
 			tempNode := node{
-				Ws:          ws,
-				Id:          id,
-				Name:        msg.Name,
-				TotalCPU:    msg.TotalCPU,
-				StartWorkAt: msg.StartWorkAt,
-				IsWorking:   msg.IsWorking,
-				TimeoutRate: msg.TimeoutRate,
-				FinishRate:  msg.FinishRate,
-				AvgDelay:    msg.AvgDelay,
+				Ws:                ws,
+				Id:                id,
+				Name:              msg.Name,
+				TotalCPU:          msg.TotalCPU,
+				StartWorkAt:       msg.StartWorkAt,
+				IsWorking:         msg.IsWorking,
+				TimeoutRate:       msg.TimeoutRate,
+				FinishRate:        msg.FinishRate,
+				AvgDelay:          msg.AvgDelay,
+				RequestStatusCode: msg.RequestStatusCode,
 			}
 			nodeLock.Lock()
 			nodeInfos[id] = tempNode
