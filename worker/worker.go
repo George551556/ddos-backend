@@ -140,8 +140,12 @@ func InitWorker() {
 				} else {
 					log.Println("开始/停止 状态不变")
 				}
-			} else {
-				// 否则为开启新任务
+			} else { // 否则为开启新任务
+				if isWorking == true {
+					log.Println("上一任务正在进行，暂不进行新任务")
+					continue
+				}
+
 				isWorking = true
 				startWork_at = time.Now().Format("01-02 15:04:05")
 				// 保存请求数据到本地文件

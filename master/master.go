@@ -138,10 +138,11 @@ func HandleGetAllNodeInfos() []node {
 func StartNewTaskAll(reqBashText string, randomList []string, totalRequestNums int, usingThreadNums int, requestTimeout string, timeConstraint int) error {
 	log.Println("启动所有设备执行新任务")
 	// 停止所有设备任务
-	err := SwitchDeviceAll(false, "")
-	if err != nil {
-		return err
-	}
+	// err := SwitchDeviceAll(false, "")
+	// if err != nil {
+	// 	return err
+	// }
+
 	// 编辑发送数据
 	msg := worker.WsMessage{
 		RequestBashText:  reqBashText,
